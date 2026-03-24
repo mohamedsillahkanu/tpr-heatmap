@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICF-SL Test Positivity Rate Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { margin: 0; padding: 20px; background-color: #ffffff; font-family: 'Oswald', Arial, sans-serif; color: #000000; font-weight: 500; }
+        .page-container { width: 100%; max-width: 1400px; margin: 0 auto; }
+        .page-header { background-color: #004080; color: #ffffff; padding: 25px 30px; text-align: center; margin-bottom: 15px; border-radius: 8px 8px 0 0; }
+        .logo-row { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 15px; }
+        .logo-box { background: #ffffff; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; }
+        .logo-box img { width: 100px; height: auto; border-radius: 6px; }
+        .page-header h3 { margin: 12px 0 5px; font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+        .page-header .tagline { margin: 0; font-size: 10px; font-weight: 500; }
+        .page-header h1 { margin: 20px 0 10px; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+        .page-header .subtitle { font-size: 14px; font-weight: 500; }
+        .formula-badge { display: inline-block; background: rgba(255,193,7,0.25); border: 2px solid #ffc107; color: #ffc107; padding: 6px 20px; border-radius: 20px; font-size: 15px; font-weight: 700; margin-top: 10px; letter-spacing: 1px; }
+        .content-card { border: 4px double #004080; border-radius: 12px; padding: 12px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .content-inner { padding: 25px; }
+        .upload-section { background: #f8f9fa; padding: 2rem; border-radius: 8px; border: 2px dashed #004080; text-align: center; margin: 1.5rem 0; transition: all 0.3s; }
+        .upload-section:hover { border-color: #0056b3; background: #e7f3ff; }
+        .upload-section h3 { color: #004080; margin-bottom: 1rem; font-size: 18px; font-weight: 700; }
+        .upload-section p { color: #000; font-weight: 500; font-size: 14px; }
+        .file-input-wrapper { position: relative; display: inline-block; cursor: pointer; background: #004080; color: #fff; padding: 14px 24px; border-radius: 6px; border: 2px solid #004080; font-size: 14px; font-weight: 700; transition: all 0.3s; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Oswald', Arial, sans-serif; margin-top: 1rem; }
+        .file-input-wrapper:hover { background: #0056b3; border-color: #0056b3; }
+        .file-input-wrapper input[type="file"] { position: absolute; left: -9999px; }
+        .section-header { background-color: #004080; color: #fff; padding: 15px 20px; margin-bottom: 20px; border-radius: 6px; display: flex; align-items: center; gap: 15px; }
+        .section-icon { background: #fff; color: #004080; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex-shrink: 0; }
+        .section-title { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .stats-card { background: #f8f9fa; padding: 1.25rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border: 2px solid #004080; transition: all 0.2s; }
+        .stats-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,64,128,0.2); }
+        .stats-card .metric-value { font-size: 1.6rem; color: #004080; margin-bottom: 0.25rem; font-weight: 700; }
+        .stats-card p { color: #666; font-size: 10px; }
+        .btn { padding: 14px 24px; border: 2px solid #004080; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Oswald', Arial, sans-serif; transition: all 0.2s; margin: 5px; }
+        .btn-primary { background: #004080; color: #fff; }
+        .btn-primary:hover { background: #0056b3; border-color: #0056b3; }
+        .btn-secondary { background: #fff; color: #004080; }
+        .btn-secondary:hover { background: #004080; color: #fff; }
+        .btn-success { background: #28a745; color: #fff; border-color: #28a745; }
+        .btn-success:hover { background: #218838; border-color: #218838; }
+        .alert { padding: 1rem; border-radius: 6px; margin: 1rem 0; font-weight: 500; }
+        .alert-success { background: #d4edda; border: 2px solid #28a745; color: #155724; }
+        .alert-error { background: #f8d7da; border: 2px solid #dc3545; color: #721c24; }
+        .alert-info { background: #e7f3ff; border: 2px solid #004080; color: #004080; }
+        .hidden { display: none !important; }
+        .config-card { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 2px solid #004080; margin: 1rem 0; }
+        .config-card h4 { color: #004080; margin-bottom: 1rem; font-size: 16px; font-weight: 700; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 700; color: #004080; font-size: 13px; }
+        .form-control { width: 100%; padding: 0.75rem 1rem; border: 2px solid #004080; border-radius: 6px; font-size: 14px; background: #fff; color: #000; font-family: 'Oswald', Arial, sans-serif; font-weight: 500; }
+        .form-control:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0,64,128,0.1); }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; }
+        .loading-spinner { border: 4px solid #e7f3ff; border-top: 4px solid #004080; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
+        .step-box { background: #e7f3ff; border: 2px solid #004080; border-radius: 8px; padding: 1rem; margin: 0.75rem 0; }
+        .step-box h5 { color: #004080; font-size: 13px; margin-bottom: 0.5rem; }
+        .step-box p { color: #000; font-size: 12px; line-height: 1.6; }
+        .step-box code { background: #fff; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; color: #004080; border: 1px solid #cce0ff; }
+        .formula-box { background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 1.25rem; margin: 1rem 0; text-align: center; }
+        .formula-box .formula-text { font-size: 18px; font-weight: 700; color: #004080; font-family: monospace; }
+        .formula-box p { font-size: 12px; color: #555; margin-top: 6px; }
+        .example-table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 12px; }
+        .example-table th { background: #004080; color: #fff; padding: 6px 12px; text-align: center; }
+        .example-table td { border: 1px solid #cce0ff; padding: 6px 12px; text-align: center; }
+        .example-table tr:nth-child(even) td { background: #f0f7ff; }
+        .highlight-td { color: #28a745; font-weight: 700; }
+        .page-footer { background-color: #004080; color: #fff; padding: 20px 30px; text-align: center; font-size: 13px; line-height: 1.7; font-weight: 500; border-radius: 0 0 8px 8px; }
+        .page-footer p { margin: 6px 0 0; font-size: 12px; }
+        .chart-container { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 2px solid #004080; margin: 1.5rem 0; text-align: center; overflow-x: auto; }
+        .heatmap-canvas { border-radius: 8px; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #004080; display: block; margin: 0 auto; max-width: 100%; }
+        .palette-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+        .palette-option { background: #f8f9fa; padding: 0.75rem; border-radius: 8px; border: 2px solid #ddd; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .palette-option:hover { border-color: #004080; }
+        .palette-option.selected { border-color: #28a745; background: #d4edda; }
+        .palette-preview { display: flex; justify-content: center; gap: 2px; margin-bottom: 0.5rem; height: 16px; }
+        .palette-preview .color-box { flex: 1; border-radius: 2px; }
+        .palette-name { font-size: 11px; font-weight: 700; color: #004080; }
+        .output-list { background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 2px solid #004080; }
+        .output-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #ddd; flex-wrap: wrap; gap: 0.5rem; }
+        .output-item:last-child { border-bottom: none; }
+        .output-item span { font-size: 13px; color: #000; }
+        .output-item .btn { padding: 8px 16px; font-size: 12px; margin: 0; }
+        .col-highlight { color: #28a745; font-weight: 700; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f8f9fa; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #004080; border-radius: 4px; }
+        @media (max-width: 768px) { body { padding: 10px; } .content-inner { padding: 15px; } .page-header h1 { font-size: 18px; } .form-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="page-container">
+
+    <!-- HEADER -->
+    <div class="page-header">
+        <div class="logo-row">
+            <div class="logo-box">
+                <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL Logo">
+            </div>
+        </div>
+        <h3>Informatics Consultancy Firm-Sierra Leone<br>(ICF-SL)</h3>
+        <p class="tagline"><em>Driving Data-Driven Solutions for Health and Development</em></p>
+        <h1>TEST POSITIVITY RATE CALCULATOR</h1>
+        <p class="subtitle">% of Tested Patients with a Confirmed Malaria Case</p>
+        <div class="formula-badge">Test Positivity Rate = (Confirmed / Tested) × 100</div>
+    </div>
+
+    <div class="content-card">
+        <div class="content-inner">
+            <div id="alertContainer"></div>
+
+            <!-- UPLOAD -->
+            <div id="uploadSection">
+                <div class="upload-section">
+                    <h3>UPLOAD YOUR DATA FILE</h3>
+                    <p>Upload a CSV or Excel (.xlsx / .xls) file with health facility malaria data</p>
+                    <label class="file-input-wrapper">
+                        Choose File
+                        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+                    </label>
+                    <div id="loading" class="hidden" style="margin-top:1rem;">
+                        <div class="loading-spinner"></div>
+                        <p style="color:#004080;font-weight:700;">Processing file…</p>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <span class="section-icon">?</span>
+                    <span class="section-title">CALCULATION METHODOLOGY</span>
+                </div>
+
+                <div class="formula-box">
+                    <div class="formula-text">Test Positivity Rate (%) = (Σ Confirmed / Σ Tested) × 100</div>
+                    <p>The percentage of tested patients who had a confirmed malaria result. Capped at 100%. Rate = 0 if tested = 0.</p>
+                </div>
+
+                <div class="config-card" style="margin:1rem 0;">
+                    <h4>Examples</h4>
+                    <table class="example-table">
+                        <thead>
+                            <tr><th>Confirmed</th><th>Tested</th><th>Positivity Rate</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>50</td><td>200</td><td class="highlight-td">25%</td></tr>
+                            <tr><td>10</td><td>100</td><td class="highlight-td">10%</td></tr>
+                            <tr><td>0</td><td>150</td><td class="highlight-td">0%</td></tr>
+                            <tr><td>80</td><td>0</td><td class="highlight-td">0% (no tested)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="step-box">
+                    <h5>Step 1 – Filter facilities</h5>
+                    <p>Only keep HFs with <strong>at least 1 month where tested &gt; 0</strong> across the entire period. HFs with <code>tested = 0</code> for all months are excluded.</p>
+                </div>
+                <div class="step-box">
+                    <h5>Step 2 – Row-level values</h5>
+                    <p>For each row read <code>confirmed</code> and <code>tested</code>. Convert nulls to 0.</p>
+                </div>
+                <div class="step-box">
+                    <h5>Step 3 – Facility-level monthly aggregation</h5>
+                    <p>Group by <code>hf × year × month</code>. Sum confirmed and tested. Calculate <code>test_positivity_rate = MIN(100, (confirmed / tested) × 100)</code> (0 if tested = 0).</p>
+                </div>
+                <div class="step-box">
+                    <h5>Step 4 – Location-level monthly aggregation</h5>
+                    <p>Group by <code>location × year-month</code>. Sum confirmed and tested across facilities. Recalculate rate.</p>
+                </div>
+                <div class="step-box">
+                    <h5>Step 5 – Location-level yearly aggregation</h5>
+                    <p>Group by <code>location × year</code>. Sum and recalculate. Used for yearly heatmap view.</p>
+                </div>
+                <div class="step-box">
+                    <h5>Step 6 – Heatmap</h5>
+                    <p>Locations sorted high→low by average positivity rate. Higher = greater proportion of tested patients with confirmed malaria.</p>
+                </div>
+            </div>
+
+            <!-- COLUMN SELECTION -->
+            <div id="columnSection" class="hidden">
+                <div class="section-header">
+                    <span class="section-icon">1</span>
+                    <span class="section-title">SELECT COLUMNS</span>
+                </div>
+
+                <div class="stats-grid" id="dataStats"></div>
+
+                <div class="config-card">
+                    <h4>Geographic Columns</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="locationColumn">Location Column <small style="color:#28a745;">(heatmap Y-axis)</small></label>
+                            <select id="locationColumn" class="form-control"><option value="">-- Select --</option></select>
+                            <small style="color:#666;font-size:11px;">e.g. District, Chiefdom, Region</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="hfColumn">Health Facility Column</label>
+                            <select id="hfColumn" class="form-control"><option value="">-- Select --</option></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <h4>Time Period Columns</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="yearColumn">Year Column</label>
+                            <select id="yearColumn" class="form-control"><option value="">-- Select --</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="monthColumn">Month Column</label>
+                            <select id="monthColumn" class="form-control"><option value="">-- Select --</option></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <h4>Test Positivity Rate Columns</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="confirmedColumn">Confirmed Column <span class="col-highlight">(Numerator)</span></label>
+                            <select id="confirmedColumn" class="form-control"><option value="">-- Select --</option></select>
+                            <small style="color:#666;font-size:11px;">e.g. conf, confirmed, malaria_conf, pos</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="testedColumn">Tested Column <span class="col-highlight">(Denominator)</span></label>
+                            <select id="testedColumn" class="form-control"><option value="">-- Select --</option></select>
+                            <small style="color:#666;font-size:11px;">e.g. test, tested, rdt_done, malaria_tested</small>
+                        </div>
+                    </div>
+                    <div style="background:#fff8e1;border:1px solid #ffc107;border-radius:6px;padding:0.75rem;margin-top:0.75rem;font-size:12px;color:#555;">
+                        <strong style="color:#004080;">Test Positivity Rate = (Confirmed / Tested) × 100</strong> — capped at 100%. HFs with tested = 0 for the entire period are excluded.
+                    </div>
+                </div>
+
+                <div style="text-align:center;margin-top:1.5rem;">
+                    <button class="btn btn-primary" onclick="processData()">Calculate Test Positivity Rate</button>
+                    <button class="btn btn-secondary" onclick="resetApplication()">Start Over</button>
+                </div>
+            </div>
+
+            <!-- RESULTS -->
+            <div id="resultsSection" class="hidden">
+                <div class="section-header">
+                    <span class="section-icon">2</span>
+                    <span class="section-title">RESULTS</span>
+                </div>
+
+                <div class="stats-grid" id="summaryStats"></div>
+
+                <div class="config-card">
+                    <h4>Download Output Files</h4>
+                    <div class="output-list" id="outputList"></div>
+                </div>
+
+                <!-- HEATMAP -->
+                <div class="section-header" style="margin-top:2rem;">
+                    <span class="section-icon">3</span>
+                    <span class="section-title">HEATMAP VISUALIZATION</span>
+                </div>
+
+                <div class="config-card">
+                    <h4>Time Aggregation</h4>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <select id="heatmapLevel" class="form-control" onchange="updateXLabel()">
+                                <option value="monthly">Monthly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <h4>Color Palette <span style="font-size:11px;color:#28a745;font-weight:500;">(CB = Colorblind-Friendly)</span></h4>
+                    <div class="palette-selector" id="paletteSelector"></div>
+                </div>
+
+                <div class="config-card">
+                    <h4>Customize Labels</h4>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="chartTitle">Chart Title</label>
+                            <input type="text" id="chartTitle" class="form-control" value="Test Positivity Rate Heatmap">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="xAxisLabel">X-Axis Label</label>
+                            <input type="text" id="xAxisLabel" class="form-control" value="Time Period (YYYY-MM)">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="yAxisLabel">Y-Axis Label</label>
+                            <input type="text" id="yAxisLabel" class="form-control" value="Location (High to Low)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <h4>Image Size</h4>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="canvasWidth">Width (px)</label>
+                            <input type="number" id="canvasWidth" class="form-control" value="1000" min="400" max="2400" step="50">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="canvasHeight">Height (px)</label>
+                            <input type="number" id="canvasHeight" class="form-control" value="700" min="300" max="2000" step="50">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <h4>Font Sizes</h4>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="titleFontSize">Title (px)</label>
+                            <input type="number" id="titleFontSize" class="form-control" value="18" min="10" max="36">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="axisLabelFontSize">Axis Label (px)</label>
+                            <input type="number" id="axisLabelFontSize" class="form-control" value="12" min="8" max="24">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="tickFontSize">Tick Label (px)</label>
+                            <input type="number" id="tickFontSize" class="form-control" value="10" min="6" max="18">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="legendFontSize">Legend (px)</label>
+                            <input type="number" id="legendFontSize" class="form-control" value="11" min="8" max="18">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align:center;margin:1.5rem 0;">
+                    <button class="btn btn-primary" onclick="generateHeatmap()">Generate Heatmap</button>
+                </div>
+
+                <div class="chart-container hidden" id="chartContainer">
+                    <canvas id="heatmapCanvas" class="heatmap-canvas"></canvas>
+                </div>
+
+                <div style="text-align:center;margin-top:1.5rem;" id="downloadButtons" class="hidden">
+                    <button class="btn btn-success" onclick="downloadHeatmap()">Download Heatmap (PNG)</button>
+                    <button class="btn btn-secondary" onclick="resetApplication()">Start Over</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="page-footer">
+        <p style="margin:0;font-weight:700;">National Malaria Control Programme</p>
+        <p>Ministry of Health and Sanitation, Sierra Leone</p>
+        <p style="font-size:10px;">© 2025 Informatics Consultancy Firm-Sierra Leone (ICF-SL)</p>
+    </div>
+</div>
+
+<script>
+/* ── STATE ── */
+let rawData = null;
+let allColumns = [];
+let selectedPalette = 'viridis';
+let hfMonthly  = [];
+let locMonthly = [];
+let locYearly  = [];
+
+/* ── PALETTES ── */
+const colorPalettes = {
+    viridis:       { name:'Viridis',           cbFriendly:true,  colors:[[68,1,84],[72,40,120],[62,74,137],[49,104,142],[38,130,142],[31,158,137],[53,183,121],[109,205,89],[180,222,44],[253,231,37]] },
+    plasma:        { name:'Plasma',            cbFriendly:true,  colors:[[13,8,135],[75,3,161],[126,3,168],[168,34,150],[204,71,120],[232,107,90],[250,149,64],[252,194,52],[239,248,33]] },
+    cividis:       { name:'Cividis',           cbFriendly:true,  colors:[[0,32,77],[0,65,108],[59,91,112],[99,113,114],[137,135,114],[176,158,110],[216,183,103],[255,210,93]] },
+    blueYellow:    { name:'Blue-Yellow',       cbFriendly:true,  colors:[[0,68,136],[35,100,150],[70,130,160],[105,160,170],[150,190,180],[195,210,170],[230,220,140],[255,230,90]] },
+    redYellowGreen:{ name:'Red-Yellow-Green',  cbFriendly:false, colors:[[165,0,38],[215,48,39],[244,109,67],[253,174,97],[254,224,139],[255,255,191],[217,239,139],[166,217,106],[102,189,99],[26,152,80],[0,104,55]] },
+    blues:         { name:'Blues',             cbFriendly:false, colors:[[247,251,255],[222,235,247],[198,219,239],[158,202,225],[107,174,214],[66,146,198],[33,113,181],[8,81,156],[8,48,107]] },
+    greens:        { name:'Greens',            cbFriendly:false, colors:[[247,252,245],[229,245,224],[199,233,192],[161,217,155],[116,196,118],[65,171,93],[35,139,69],[0,109,44],[0,68,27]] },
+    orangeRed:     { name:'Orange-Red',        cbFriendly:false, colors:[[255,247,236],[254,232,200],[253,212,158],[253,187,132],[252,141,89],[239,101,72],[215,48,31],[179,0,0],[127,0,0]] }
+};
+
+/* ── INIT ── */
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+document.addEventListener('DOMContentLoaded', renderPaletteSelector);
+
+function renderPaletteSelector() {
+    const c = document.getElementById('paletteSelector');
+    c.innerHTML = Object.entries(colorPalettes).map(([key, p]) => `
+        <div class="palette-option ${key === selectedPalette ? 'selected' : ''}" onclick="selectPalette('${key}')" data-palette="${key}">
+            <div class="palette-preview">
+                ${p.colors.slice(0,8).map(col => `<div class="color-box" style="background:rgb(${col[0]},${col[1]},${col[2]});"></div>`).join('')}
+            </div>
+            <div class="palette-name">${p.name}${p.cbFriendly ? ' (CB)' : ''}</div>
+        </div>`).join('');
+}
+
+function selectPalette(key) {
+    selectedPalette = key;
+    document.querySelectorAll('.palette-option').forEach(o => o.classList.toggle('selected', o.dataset.palette === key));
+}
+
+/* ── ALERTS ── */
+function showAlert(msg, type = 'info') {
+    const c = document.getElementById('alertContainer');
+    c.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+    if (type === 'success') setTimeout(() => c.innerHTML = '', 5000);
+}
+
+/* ── FILE UPLOAD ── */
+async function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('loading').classList.remove('hidden');
+    try {
+        const result = await readFile(file);
+        rawData = result;
+        allColumns = result.columns;
+        document.getElementById('dataStats').innerHTML = `
+            <div class="stats-card"><div class="metric-value">${result.rowCount.toLocaleString()}</div><p>Total Rows</p></div>
+            <div class="stats-card"><div class="metric-value">${result.columns.length}</div><p>Columns</p></div>`;
+        populateDropdowns();
+        autoSelectColumns();
+        document.getElementById('uploadSection').classList.add('hidden');
+        document.getElementById('columnSection').classList.remove('hidden');
+        showAlert(`File loaded: ${result.rowCount.toLocaleString()} rows × ${result.columns.length} columns`, 'success');
+    } catch(err) {
+        showAlert(`Error: ${err.message}`, 'error');
+    } finally {
+        document.getElementById('loading').classList.add('hidden');
+    }
+}
+
+function readFile(file) {
+    return new Promise((resolve, reject) => {
+        const ext = file.name.toLowerCase().split('.').pop();
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                let data;
+                if (ext === 'csv') {
+                    data = Papa.parse(ev.target.result, { header: true, skipEmptyLines: true, dynamicTyping: true }).data;
+                } else {
+                    const wb = XLSX.read(ev.target.result, { type: 'array' });
+                    data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                }
+                const cleaned = data.filter(r => Object.values(r).some(v => v !== null && v !== undefined && String(v).trim() !== ''));
+                resolve({ data: cleaned, columns: Object.keys(cleaned[0] || {}), rowCount: cleaned.length });
+            } catch(err) { reject(err); }
+        };
+        reader.onerror = () => reject(new Error('File read error'));
+        ext === 'csv' ? reader.readAsText(file) : reader.readAsArrayBuffer(file);
+    });
+}
+
+function populateDropdowns() {
+    ['locationColumn','hfColumn','yearColumn','monthColumn','confirmedColumn','testedColumn'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '<option value="">-- Select --</option>' +
+            allColumns.map(c => `<option value="${c}">${c}</option>`).join('');
+    });
+}
+
+function autoSelectColumns() {
+    const patterns = {
+        locationColumn:  ['adm1','adm2','adm3','region','district','province','chiefdom','lga'],
+        hfColumn:        ['hf','facility','health_facility','healthfacility','hf_name','facilityname'],
+        yearColumn:      ['year','yr'],
+        monthColumn:     ['month','mon','mth'],
+        confirmedColumn: ['conf','confirmed','malaria_conf','pos','positive'],
+        testedColumn:    ['test','tested','malaria_test','rdt','rdt_done','alltest','mal_test']
+    };
+    allColumns.forEach(col => {
+        const lower = col.toLowerCase();
+        Object.entries(patterns).forEach(([id, kws]) => {
+            const sel = document.getElementById(id);
+            if (!sel.value && kws.some(k => lower === k || lower.includes(k))) sel.value = col;
+        });
+    });
+}
+
+/* ── PROCESS DATA ── */
+function processData() {
+    const locCol    = document.getElementById('locationColumn').value;
+    const hfCol     = document.getElementById('hfColumn').value;
+    const yrCol     = document.getElementById('yearColumn').value;
+    const moCol     = document.getElementById('monthColumn').value;
+    const confCol   = document.getElementById('confirmedColumn').value;
+    const testedCol = document.getElementById('testedColumn').value;
+
+    if (!locCol || !hfCol || !yrCol || !moCol || !confCol || !testedCol) {
+        showAlert('Please select all required columns.', 'error');
+        return;
+    }
+
+    showAlert('Calculating test positivity rates…', 'info');
+
+    try {
+        /* Row-level parse */
+        const allRows = rawData.data.map(r => ({
+            location:  String(r[locCol]    || '').trim(),
+            hf:        String(r[hfCol]     || '').trim(),
+            year:      parseInt(r[yrCol])  || 0,
+            month:     parseInt(r[moCol])  || 0,
+            confirmed: Math.max(0, parseFloat(r[confCol])   || 0),
+            tested:    Math.max(0, parseFloat(r[testedCol]) || 0)
+        })).filter(r => r.location && r.hf && r.year && r.month);
+
+        /* Step 1 — Keep only HFs with at least 1 month where tested > 0 */
+        const hfsWithReports = new Set();
+        allRows.forEach(r => { if (r.tested > 0) hfsWithReports.add(`${r.location}||${r.hf}`); });
+
+        const totalHFs    = new Set(allRows.map(r => `${r.location}||${r.hf}`)).size;
+        const hfsNoReport = totalHFs - hfsWithReports.size;
+
+        const rows = allRows.filter(r => hfsWithReports.has(`${r.location}||${r.hf}`));
+
+        /* HF-level monthly */
+        const hfMoMap = {};
+        rows.forEach(r => {
+            const date = `${r.year}-${String(r.month).padStart(2,'0')}`;
+            const key  = `${r.location}||${r.hf}||${date}`;
+            if (!hfMoMap[key]) hfMoMap[key] = { location:r.location, hf:r.hf, year:r.year, month:r.month, date, confirmed:0, tested:0 };
+            hfMoMap[key].confirmed += r.confirmed;
+            hfMoMap[key].tested    += r.tested;
+        });
+
+        hfMonthly = Object.values(hfMoMap).map(row => {
+            const rate = row.tested > 0 ? Math.min(100, (row.confirmed / row.tested) * 100) : 0;
+            return { ...row, test_positivity_rate: Math.round(rate * 100) / 100 };
+        }).sort((a,b) => a.location.localeCompare(b.location) || a.date.localeCompare(b.date));
+
+        /* Location-level monthly */
+        const locMoMap = {};
+        hfMonthly.forEach(r => {
+            const key = `${r.location}||${r.date}`;
+            if (!locMoMap[key]) locMoMap[key] = { location:r.location, date:r.date, year:r.year, month:r.month, confirmed:0, tested:0 };
+            locMoMap[key].confirmed += r.confirmed;
+            locMoMap[key].tested    += r.tested;
+        });
+
+        locMonthly = Object.values(locMoMap).map(row => {
+            const rate = row.tested > 0 ? Math.min(100, (row.confirmed / row.tested) * 100) : 0;
+            return { ...row, test_positivity_rate: Math.round(rate * 100) / 100 };
+        }).sort((a,b) => a.location.localeCompare(b.location) || a.date.localeCompare(b.date));
+
+        /* Location-level yearly */
+        const locYrMap = {};
+        hfMonthly.forEach(r => {
+            const key = `${r.location}||${r.year}`;
+            if (!locYrMap[key]) locYrMap[key] = { location:r.location, year:r.year, confirmed:0, tested:0 };
+            locYrMap[key].confirmed += r.confirmed;
+            locYrMap[key].tested    += r.tested;
+        });
+
+        locYearly = Object.values(locYrMap).map(row => {
+            const rate = row.tested > 0 ? Math.min(100, (row.confirmed / row.tested) * 100) : 0;
+            return { ...row, test_positivity_rate: Math.round(rate * 100) / 100 };
+        }).sort((a,b) => a.location.localeCompare(b.location) || a.year - b.year);
+
+        /* Summary stats */
+        const totalConf   = rows.reduce((s,r) => s + r.confirmed, 0);
+        const totalTested = rows.reduce((s,r) => s + r.tested, 0);
+        const overallRate = totalTested > 0 ? Math.min(100, (totalConf / totalTested) * 100) : 0;
+        const uniqueLocs  = new Set(rows.map(r => r.location)).size;
+        const uniqueHFs   = hfsWithReports.size;
+        const timePeriods = new Set(rows.map(r => `${r.year}-${r.month}`)).size;
+        const avgLocRate  = locMonthly.length > 0
+            ? locMonthly.reduce((s,r) => s + r.test_positivity_rate, 0) / locMonthly.length : 0;
+
+        document.getElementById('summaryStats').innerHTML = `
+            <div class="stats-card"><div class="metric-value">${uniqueLocs}</div><p>Locations</p></div>
+            <div class="stats-card"><div class="metric-value">${uniqueHFs.toLocaleString()}</div><p>HFs With Reports</p></div>
+            <div class="stats-card"><div class="metric-value">${hfsNoReport.toLocaleString()}</div><p>HFs No Reports (excluded)</p></div>
+            <div class="stats-card"><div class="metric-value">${timePeriods}</div><p>Time Periods</p></div>
+            <div class="stats-card"><div class="metric-value">${totalConf.toLocaleString()}</div><p>Total Confirmed</p></div>
+            <div class="stats-card"><div class="metric-value">${totalTested.toLocaleString()}</div><p>Total Tested</p></div>
+            <div class="stats-card"><div class="metric-value">${overallRate.toFixed(1)}%</div><p>Overall Rate</p></div>
+            <div class="stats-card"><div class="metric-value">${avgLocRate.toFixed(1)}%</div><p>Avg Location Rate</p></div>`;
+
+        /* Auto Y-axis label */
+        document.getElementById('yAxisLabel').value = locCol + ' (High to Low)';
+
+        renderOutputList();
+        document.getElementById('columnSection').classList.add('hidden');
+        document.getElementById('resultsSection').classList.remove('hidden');
+        showAlert('Test positivity rates calculated successfully!', 'success');
+
+    } catch(err) {
+        showAlert(`Processing error: ${err.message}`, 'error');
+        console.error(err);
+    }
+}
+
+/* ── OUTPUT FILES ── */
+function renderOutputList() {
+    const outputs = [
+        { name:'hf_test_positivity_rate_monthly.xlsx',       data:hfMonthly,  desc:'Facility-level monthly test positivity rates' },
+        { name:'location_test_positivity_rate_monthly.xlsx', data:locMonthly, desc:'Location monthly test positivity rates' },
+        { name:'location_test_positivity_rate_yearly.xlsx',  data:locYearly,  desc:'Location yearly test positivity rates' }
+    ];
+    document.getElementById('outputList').innerHTML = outputs.map((o,i) => `
+        <div class="output-item">
+            <span><strong>${o.name}</strong> – ${o.desc} (${o.data.length.toLocaleString()} rows)</span>
+            <button class="btn btn-success" onclick="downloadExcel(${i})">Download</button>
+        </div>`).join('');
+}
+
+function downloadExcel(idx) {
+    const outputs = [
+        { name:'hf_test_positivity_rate_monthly.xlsx',       data:hfMonthly  },
+        { name:'location_test_positivity_rate_monthly.xlsx', data:locMonthly },
+        { name:'location_test_positivity_rate_yearly.xlsx',  data:locYearly  }
+    ];
+    const o = outputs[idx];
+    const ws = XLSX.utils.json_to_sheet(o.data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    XLSX.writeFile(wb, o.name);
+    showAlert(`Downloaded: ${o.name}`, 'success');
+}
+
+/* ── HEATMAP ── */
+function updateXLabel() {
+    const v = document.getElementById('heatmapLevel').value;
+    document.getElementById('xAxisLabel').value = v === 'yearly' ? 'Year' : 'Time Period (YYYY-MM)';
+}
+
+function generateHeatmap() {
+    const level   = document.getElementById('heatmapLevel').value;
+    const data    = level === 'monthly' ? locMonthly : locYearly;
+    const timeKey = level === 'monthly' ? 'date' : 'year';
+    if (!data || data.length === 0) { showAlert('No data available for heatmap.', 'error'); return; }
+    drawHeatmap(data, 'location', timeKey);
+    document.getElementById('chartContainer').classList.remove('hidden');
+    document.getElementById('downloadButtons').classList.remove('hidden');
+    document.getElementById('chartContainer').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function drawHeatmap(data, locKey, timeKey) {
+    const canvas = document.getElementById('heatmapCanvas');
+    const ctx    = canvas.getContext('2d');
+
+    const title    = document.getElementById('chartTitle').value        || 'Test Positivity Rate Heatmap';
+    const xLabel   = document.getElementById('xAxisLabel').value        || 'Time Period';
+    const yLabel   = document.getElementById('yAxisLabel').value        || 'Location (High to Low)';
+    const W        = parseInt(document.getElementById('canvasWidth').value)        || 1000;
+    const H        = parseInt(document.getElementById('canvasHeight').value)       || 700;
+    const titleFS  = parseInt(document.getElementById('titleFontSize').value)      || 18;
+    const axisFS   = parseInt(document.getElementById('axisLabelFontSize').value)  || 12;
+    const tickFS   = parseInt(document.getElementById('tickFontSize').value)       || 10;
+    const legendFS = parseInt(document.getElementById('legendFontSize').value)     || 11;
+
+    canvas.width  = W;
+    canvas.height = H;
+
+    const times = [...new Set(data.map(r => String(r[timeKey])))].sort();
+
+    const locMap = {};
+    data.forEach(r => {
+        const loc = r[locKey];
+        if (!locMap[loc]) locMap[loc] = { values:{}, sum:0, cnt:0 };
+        locMap[loc].values[String(r[timeKey])] = r.test_positivity_rate;
+        locMap[loc].sum += r.test_positivity_rate;
+        locMap[loc].cnt++;
+    });
+
+    const sortedLocs = Object.entries(locMap)
+        .map(([loc, d]) => ({ loc, avg: d.cnt ? d.sum / d.cnt : 0 }))
+        .sort((a, b) => b.avg - a.avg)
+        .map(d => d.loc);
+
+    const margins = { top:110, bottom:90, left:45, right:30 };
+    const hmW = W - margins.left - margins.right;
+    const hmH = H - margins.top  - margins.bottom;
+    const cW  = hmW / times.length;
+    const cH  = hmH / sortedLocs.length;
+    const sx  = margins.left;
+    const sy  = margins.top;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    /* Title */
+    ctx.fillStyle = '#004080';
+    ctx.font = `bold ${titleFS}px Oswald, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(title, W / 2, 28);
+
+    /* Legend */
+    const lgW = 300, lgH = 14;
+    const lgX = (W - lgW) / 2, lgY = 44, lgPad = 20;
+
+    ctx.fillStyle = '#f8f9fa'; ctx.strokeStyle = '#004080'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect
+        ? ctx.roundRect(lgX - lgPad, lgY - 6, lgW + lgPad * 2, 52, 4)
+        : ctx.rect(lgX - lgPad, lgY - 6, lgW + lgPad * 2, 52);
+    ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = '#004080';
+    ctx.font = `bold ${legendFS}px Oswald, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Test Positivity Rate (%)', W / 2, lgY + 8);
+
+    for (let i = 0; i <= lgW; i++) {
+        ctx.fillStyle = getColor(i / lgW);
+        ctx.fillRect(lgX + i, lgY + 14, 1, lgH);
+    }
+    ctx.strokeStyle = '#004080';
+    ctx.strokeRect(lgX, lgY + 14, lgW, lgH);
+
+    ctx.fillStyle = '#333';
+    ctx.font = `${legendFS - 1}px Oswald, sans-serif`;
+    [0, 25, 50, 75, 100].forEach(tick => {
+        ctx.textAlign = 'center';
+        ctx.fillText(`${tick}%`, lgX + (tick / 100) * lgW, lgY + 14 + lgH + 12);
+    });
+
+    /* Y-axis label (rotated, no tick labels) */
+    ctx.save();
+    ctx.translate(16, sy + hmH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#004080';
+    ctx.font = `bold ${axisFS}px Oswald, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    /* X-axis label */
+    ctx.fillStyle = '#004080';
+    ctx.font = `bold ${axisFS}px Oswald, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(xLabel, sx + hmW / 2, H - 8);
+
+    /* Cells */
+    sortedLocs.forEach((loc, li) => {
+        times.forEach((t, ti) => {
+            const val   = locMap[loc].values[t] ?? 0;
+            const cellX = sx + ti * cW;
+            const cellY = sy + li * cH;
+            ctx.fillStyle = getColor(val / 100);
+            ctx.fillRect(cellX, cellY, cW + 0.5, cH + 0.5);
+        });
+    });
+
+    /* Border */
+    ctx.strokeStyle = '#004080'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(sx, sy, hmW, hmH);
+
+    /* X-axis tick labels */
+    const labelStep = Math.max(1, Math.ceil(times.length / 24));
+    ctx.font = `${tickFS}px Oswald, sans-serif`;
+    times.forEach((t, ti) => {
+        if (ti % labelStep === 0) {
+            const lx = sx + ti * cW + cW / 2;
+            ctx.save();
+            ctx.translate(lx + 2, sy + hmH + 8);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = '#333'; ctx.textAlign = 'right';
+            ctx.fillText(String(t), 0, 0);
+            ctx.restore();
+        }
+    });
+
+    /* Footer */
+    ctx.fillStyle = '#999';
+    ctx.font = `${tickFS - 1}px Oswald, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`${sortedLocs.length} locations × ${times.length} periods  |  ICF-SL`, W - 5, H - 2);
+}
+
+function getColor(t) {
+    t = Math.max(0, Math.min(1, t));
+    const pal = colorPalettes[selectedPalette].colors;
+    const idx = t * (pal.length - 1);
+    const lo  = Math.floor(idx), hi = Math.ceil(idx), rat = idx - lo;
+    if (lo === hi) return `rgb(${pal[lo][0]},${pal[lo][1]},${pal[lo][2]})`;
+    return `rgb(${Math.round(pal[lo][0]*(1-rat)+pal[hi][0]*rat)},${Math.round(pal[lo][1]*(1-rat)+pal[hi][1]*rat)},${Math.round(pal[lo][2]*(1-rat)+pal[hi][2]*rat)})`;
+}
+
+function downloadHeatmap() {
+    const canvas = document.getElementById('heatmapCanvas');
+    const link   = document.createElement('a');
+    const title  = document.getElementById('chartTitle').value || 'test_positivity_rate_heatmap';
+    link.download = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.png';
+    link.href     = canvas.toDataURL('image/png');
+    link.click();
+    showAlert('Heatmap downloaded!', 'success');
+}
+
+/* ── RESET ── */
+function resetApplication() {
+    rawData = null; allColumns = [];
+    hfMonthly = []; locMonthly = []; locYearly = [];
+    selectedPalette = 'viridis';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('chartTitle').value        = 'Test Positivity Rate Heatmap';
+    document.getElementById('xAxisLabel').value        = 'Time Period (YYYY-MM)';
+    document.getElementById('yAxisLabel').value        = 'Location (High to Low)';
+    document.getElementById('canvasWidth').value       = '1000';
+    document.getElementById('canvasHeight').value      = '700';
+    document.getElementById('titleFontSize').value     = '18';
+    document.getElementById('axisLabelFontSize').value = '12';
+    document.getElementById('tickFontSize').value      = '10';
+    document.getElementById('legendFontSize').value    = '11';
+    document.getElementById('uploadSection').classList.remove('hidden');
+    document.getElementById('columnSection').classList.add('hidden');
+    document.getElementById('resultsSection').classList.add('hidden');
+    document.getElementById('chartContainer').classList.add('hidden');
+    document.getElementById('downloadButtons').classList.add('hidden');
+    document.getElementById('alertContainer').innerHTML = '';
+    renderPaletteSelector();
+}
+</script>
+</body>
+</html>
